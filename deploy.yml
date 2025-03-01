@@ -1,0 +1,20 @@
+---
+- name: Deploy Docker Container
+  hosts: localhost
+  remote_user: ashutosh
+  become: yes
+  tasks:
+    - name: Pull Docker Image
+      command: docker pull <DOCKERHUB_USER>/spe-calc-mini-project:latest
+
+    - name: Stop Existing Container
+      command: docker stop scientific-calculator
+      ignore_errors: yes
+
+    - name: Remove Existing Container
+      command: docker rm scientific-calculator
+      ignore_errors: yes
+
+    - name: Run New Container
+      command: >
+        docker run -d --name scientific-calculator -p 8080:8080 <DOCKERHUB_USER>/scientific-calculator:latest
