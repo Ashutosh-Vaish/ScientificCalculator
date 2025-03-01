@@ -1,20 +1,41 @@
 ---
 - name: Deploy Docker Container
   hosts: localhost
-  remote_user: ashutosh
-  become: yes
+  become: true  # Enables sudo for tasks that require it
   tasks:
-    - name: Pull Docker Image
-      command: docker pull <DOCKERHUB_USER>/spe-calc-mini-project:latest
 
-    - name: Stop Existing Container
-      command: docker stop scientific-calculator
-      ignore_errors: yes
+    - name: Ensure Docker is installed
+      package:
+        name: docker
+        state: present
 
-    - name: Remove Existing Container
-      command: docker rm scientific-calculator
-      ignore_errors: yes
+    - name: Ensure Docker service is running
+      service:
+        name: docker
+        state: started
+        enabled: yes
 
-    - name: Run New Container
+    - name: Pull latest Docker image from Docker Hub
+      command: docker pull {{ dockerhub_user }}/scientific-calculator:latest
+      register: pull_result
+      changed_when: "'Downloaded newer image' in pull_result.stdout"
+
+    - name: Stop and remove existing container (if running)
+      command: docker rm -f scientific-calculator-container
+      ignore_errors: yes  # Ignore errors if the container doesn't exist
+
+    - name: Run the Docker container
       command: >
-        docker run -d --name scientific-calculator -p 8080:8080 <DOCKERHUB_USER>/scientific-calculator:latest
+        docker run -d --name scientific-calculator-container
+        -p 8080:8080
+        {{ dockerhub_user }}/scientific-calculator:latest
+
+    - name: Verify if container is running
+      shell: docker ps -q -f name=scientific-calculator-container
+      register: container_running
+      failed_when: container_running.stdout == ""
+      changed_when: false
+
+    - name: Display Success Message
+      debug:
+        msg: "Deployment Successful! Your application is running on port 8080."
